@@ -16,75 +16,160 @@
 
 package com.google.samples.propertyanimation
 
+import android.animation.*
+import android.annotation.SuppressLint
+import android.graphics.Color
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.widget.Button
-import android.widget.ImageView
-
+import android.view.View
+import android.view.ViewGroup
+import android.view.animation.AccelerateInterpolator
+import android.view.animation.LinearInterpolator
+import android.widget.FrameLayout
+import androidx.appcompat.widget.AppCompatImageView
+import com.google.samples.propertyanimation.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
 
-    lateinit var star: ImageView
-    lateinit var rotateButton: Button
-    lateinit var translateButton: Button
-    lateinit var scaleButton: Button
-    lateinit var fadeButton: Button
-    lateinit var colorizeButton: Button
-    lateinit var showerButton: Button
+    private val binding by lazy { ActivityMainBinding.inflate(layoutInflater) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        setContentView(binding.root)
 
-        star = findViewById(R.id.star)
-        rotateButton = findViewById<Button>(R.id.rotateButton)
-        translateButton = findViewById<Button>(R.id.translateButton)
-        scaleButton = findViewById<Button>(R.id.scaleButton)
-        fadeButton = findViewById<Button>(R.id.fadeButton)
-        colorizeButton = findViewById<Button>(R.id.colorizeButton)
-        showerButton = findViewById<Button>(R.id.showerButton)
+        with(binding) {
+            rotateButton.setOnClickListener {
+                rotater()
+            }
 
-        rotateButton.setOnClickListener {
-            rotater()
+            translateButton.setOnClickListener {
+                translater()
+            }
+
+            scaleButton.setOnClickListener {
+                scaler()
+            }
+
+            fadeButton.setOnClickListener {
+                fader()
+            }
+
+            colorizeButton.setOnClickListener {
+                colorizer()
+            }
+
+            showerButton.setOnClickListener {
+                shower()
+            }
         }
 
-        translateButton.setOnClickListener {
-            translater()
+
+    }
+
+    private fun ObjectAnimator.disableViewDuringAnimation(view: View) {
+        addListener(object: AnimatorListenerAdapter() {
+            override fun onAnimationStart(animation: Animator?) {
+                view.isEnabled = false
+            }
+            override fun onAnimationEnd(animation: Animator?) {
+                view.isEnabled = true
+            }
+        })
+    }
+
+    private fun ActivityMainBinding.rotater() {
+        ObjectAnimator.ofFloat(star, View.ROTATION, -360f, 0f).apply {
+            duration = 2000
+            disableViewDuringAnimation(rotateButton)
+            start()
+        }
+    }
+
+    private fun ActivityMainBinding.translater() {
+        ObjectAnimator.ofFloat(star, View.TRANSLATION_X, 200f).apply {
+            disableViewDuringAnimation(translateButton)
+            repeatCount = 1
+            repeatMode = ObjectAnimator.REVERSE
+            start()
+        }
+    }
+
+    private fun ActivityMainBinding.scaler() {
+        val scaleX: PropertyValuesHolder = PropertyValuesHolder.ofFloat(View.SCALE_X, 4f)
+        val scaleY: PropertyValuesHolder = PropertyValuesHolder.ofFloat(View.SCALE_Y, 4f)
+        ObjectAnimator.ofPropertyValuesHolder(star, scaleX, scaleY).apply {
+            disableViewDuringAnimation(scaleButton)
+            repeatMode = ObjectAnimator.REVERSE
+            repeatCount = 1
+            interpolator = AccelerateInterpolator()
+            start()
         }
 
-        scaleButton.setOnClickListener {
-            scaler()
-        }
+    }
 
-        fadeButton.setOnClickListener {
-            fader()
-        }
-
-        colorizeButton.setOnClickListener {
-            colorizer()
-        }
-
-        showerButton.setOnClickListener {
-            shower()
+    private fun ActivityMainBinding.fader() {
+        ObjectAnimator.ofFloat(star, View.ALPHA, 0f).apply {
+            repeatCount = 5 * 2 + 1
+            repeatMode = ObjectAnimator.REVERSE
+            disableViewDuringAnimation(fadeButton)
+            start()
         }
     }
 
-    private fun rotater() {
+    @SuppressLint("ObjectAnimatorBinding")
+    private fun ActivityMainBinding.colorizer() {
+        ObjectAnimator.ofArgb(star.parent, "backgroundColor", Color.BLACK, Color.RED, Color.GREEN,Color.BLUE).apply {
+            duration = 2000
+            repeatMode = ObjectAnimator.REVERSE
+            repeatCount = 1
+            disableViewDuringAnimation(colorizeButton)
+            start()
+        }
     }
 
-    private fun translater() {
+    private fun ActivityMainBinding.shower() {
+        val container = star.parent as ViewGroup
+        val containerH = container.height
+        val containerW = container.width
+        var starH = star.height.toFloat()
+        var starW = star.width.toFloat()
+        val newStar = AppCompatImageView(this@MainActivity).apply {
+            setImageResource(R.drawable.ic_star)
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            container.addView(this)
+            scaleX = Math.random().toFloat() * 1.5f + .1f
+            scaleY = scaleX
+            starH *= scaleX
+            starW *= scaleY
+            translationX = Math.random().toFloat() * containerW - starW / 2
+        }
+
+
+        val moverYAnimator = ObjectAnimator.ofFloat(newStar, View.TRANSLATION_Y, -starH, containerH + starH).apply {
+            interpolator = AccelerateInterpolator(1f)
+        }
+
+
+        val rotationAnimator = ObjectAnimator.ofFloat(newStar, View.ROTATION, Math.random().toFloat() * 1080).apply {
+            interpolator = LinearInterpolator()
+        }
+
+        AnimatorSet().apply {
+            playTogether(moverYAnimator, rotationAnimator)
+            duration = (Math.random() * 1500 + 500).toLong()
+            addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator?) {
+                    container.removeView(newStar)
+                }
+            })
+            start()
+        }
+
+
     }
 
-    private fun scaler() {
-    }
-
-    private fun fader() {
-    }
-
-    private fun colorizer() {
-    }
-
-    private fun shower() {
-    }
 
 }
